@@ -157,8 +157,7 @@ class CenterNetHead(BaseDenseHead):
                 - loss_wh (Tensor): loss of hw heatmap
                 - loss_offset (Tensor): loss of offset heatmap.
         """
-        assert len(center_heatmap_preds) == len(wh_preds) == len(
-            offset_preds) == 1
+        assert len(center_heatmap_preds) == len(wh_preds) == len(offset_preds) == 1
         center_heatmap_pred = center_heatmap_preds[0]
         wh_pred = wh_preds[0]
         offset_pred = offset_preds[0]
