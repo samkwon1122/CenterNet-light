@@ -1,16 +1,11 @@
 _base_ = [
-    '../_base_/datasets/trash_detection.py',
+    '../_base_/datasets/coco_detection.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py',
     './centernet_tta.py'
 ]
 
-metainfo = {
-    'classes': ('가구류', '고철류', '나무', '도기류', '비닐', '스티로폼', '유리병', '의류', '자전거', '전자제품', '종이류', '캔류', '페트병', '플라스틱류', '형광등'),
-    'palette': [(220, 20, 60), (119, 11, 32), (0, 0, 142), (0, 0, 230), (106, 0, 228), (0, 60, 100), (0, 80, 100), (0, 0, 70), (0, 0, 192), (250, 170, 30), (100, 170, 30), (220, 220, 0), (175, 116, 175), (250, 0, 30), (165, 42, 42)]
-}
-
 dataset_type = 'CocoDataset'
-data_root = '/home/khc/trash/'
+data_root = '/mmdetection/data/coco/'
 
 # model settings
 model = dict(
@@ -23,14 +18,14 @@ model = dict(
     backbone=dict(
         type='HourglassNet',
         downsample_times=5,
-        num_stacks=1,
+        num_stacks=2,
         stage_channels=[256, 256, 384, 384, 384, 512],
         stage_blocks=[2, 2, 2, 2, 2, 4],
         norm_cfg=dict(type='BN', requires_grad=True)),
     neck=None,
     bbox_head=dict(
         type='CenterNetHead',
-        num_classes=15,
+        num_classes=80,
         in_channels=256,
         feat_channels=256,
         loss_center_heatmap=dict(type='GaussianFocalLoss', loss_weight=1.0),
@@ -87,8 +82,8 @@ test_pipeline = [
 
 # Use RepeatDataset to speed up training
 train_dataloader = dict(
-    batch_size=1,
-    num_workers=1,
+    batch_size=8,
+    num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
@@ -98,9 +93,8 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            metainfo=metainfo,
-            ann_file='train_100/annotations_train_100.json',
-            data_prefix=dict(img='train_100/images/'),
+            ann_file='annotations/instances_train2017.json',
+            data_prefix=dict(img='train2017'),
             filter_cfg=dict(filter_empty_gt=True, min_size=32),
             pipeline=train_pipeline,
             backend_args={{_base_.backend_args}},
@@ -135,4 +129,4 @@ train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140
 # NOTE: `auto_scale_lr` is for automatically scaling LR,
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (16 samples per GPU)
-auto_scale_lr = dict(base_batch_size=1)
+auto_scale_lr = dict(base_batch_size=8)
