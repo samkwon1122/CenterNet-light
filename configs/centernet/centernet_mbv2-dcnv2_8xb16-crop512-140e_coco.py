@@ -10,7 +10,7 @@ metainfo = {
 }
 
 dataset_type = 'CocoDataset'
-data_root = '/home/khc/trash/'
+data_root = '/mmdetection/data/trash/'
 
 # model settings
 model = dict(
@@ -87,9 +87,9 @@ test_pipeline = [
 
 # Use RepeatDataset to speed up training
 train_dataloader = dict(
-    batch_size=1,
-    num_workers=1,
-    persistent_workers=True,
+    batch_size=16,
+    num_workers=0,
+    persistent_workers=False,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
         _delete_=True,
@@ -99,8 +99,8 @@ train_dataloader = dict(
             type=dataset_type,
             data_root=data_root,
             metainfo=metainfo,
-            ann_file='train_100/annotations_train_100.json',
-            data_prefix=dict(img='train_100/images/'),
+            ann_file='train_1000/annotations_train_1000.json',
+            data_prefix=dict(img='train_1000/images/'),
             filter_cfg=dict(filter_empty_gt=True, min_size=32),
             pipeline=train_pipeline,
             backend_args={{_base_.backend_args}},
@@ -115,7 +115,7 @@ test_dataloader = val_dataloader
 # if you use adam+lr5e-4, the map is 29.1.
 optim_wrapper = dict(clip_grad=dict(max_norm=35, norm_type=2))
 
-max_epochs = 28
+max_epochs = 10
 # learning policy
 # Based on the default settings of modern detectors, we added warmup settings.
 param_scheduler = [
@@ -135,4 +135,4 @@ train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140
 # NOTE: `auto_scale_lr` is for automatically scaling LR,
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (16 samples per GPU)
-auto_scale_lr = dict(base_batch_size=1)
+auto_scale_lr = dict(base_batch_size=16)

@@ -157,7 +157,7 @@ class CenterNetHead(BaseDenseHead):
                 - loss_wh (Tensor): loss of hw heatmap
                 - loss_offset (Tensor): loss of offset heatmap.
         """
-        assert len(center_heatmap_preds) == len(wh_preds) == len(offset_preds) == 2
+        assert len(center_heatmap_preds) == len(wh_preds) == len(offset_preds)
         center_heatmap_pred = center_heatmap_preds[-1]
         wh_pred = wh_preds[-1]
         offset_pred = offset_preds[-1]
@@ -304,7 +304,7 @@ class CenterNetHead(BaseDenseHead):
                   the last dimension 4 arrange as (x1, y1, x2, y2).
         """
         assert len(center_heatmap_preds) == len(wh_preds) == len(
-            offset_preds) == 1
+            offset_preds)
         result_list = []
         for img_id in range(len(batch_img_metas)):
             result_list.append(

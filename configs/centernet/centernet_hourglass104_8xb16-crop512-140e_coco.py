@@ -1,11 +1,16 @@
 _base_ = [
-    '../_base_/datasets/coco_detection.py',
+    '../_base_/datasets/trash_detection.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py',
     './centernet_tta.py'
 ]
 
+metainfo = {
+    'classes': ('가구류', '고철류', '나무', '도기류', '비닐', '스티로폼', '유리병', '의류', '자전거', '전자제품', '종이류', '캔류', '페트병', '플라스틱류', '형광등'),
+    'palette': [(220, 20, 60), (119, 11, 32), (0, 0, 142), (0, 0, 230), (106, 0, 228), (0, 60, 100), (0, 80, 100), (0, 0, 70), (0, 0, 192), (250, 170, 30), (100, 170, 30), (220, 220, 0), (175, 116, 175), (250, 0, 30), (165, 42, 42)]
+}
+
 dataset_type = 'CocoDataset'
-data_root = '/mmdetection/data/coco/'
+data_root = '/mmdetection/data/trash/'
 
 # model settings
 model = dict(
@@ -25,7 +30,7 @@ model = dict(
     neck=None,
     bbox_head=dict(
         type='CenterNetHead',
-        num_classes=80,
+        num_classes=15,
         in_channels=256,
         feat_channels=256,
         loss_center_heatmap=dict(type='GaussianFocalLoss', loss_weight=1.0),
@@ -82,7 +87,7 @@ test_pipeline = [
 
 # Use RepeatDataset to speed up training
 train_dataloader = dict(
-    batch_size=8,
+    batch_size=16,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
@@ -93,8 +98,9 @@ train_dataloader = dict(
         dataset=dict(
             type=dataset_type,
             data_root=data_root,
-            ann_file='annotations/instances_train2017.json',
-            data_prefix=dict(img='train2017'),
+            metainfo=metainfo,
+            ann_file='train_1000/annotations_train_1000.json',
+            data_prefix=dict(img='train_1000/images/'),
             filter_cfg=dict(filter_empty_gt=True, min_size=32),
             pipeline=train_pipeline,
             backend_args={{_base_.backend_args}},
@@ -109,7 +115,7 @@ test_dataloader = val_dataloader
 # if you use adam+lr5e-4, the map is 29.1.
 optim_wrapper = dict(clip_grad=dict(max_norm=35, norm_type=2))
 
-max_epochs = 28
+max_epochs = 10
 # learning policy
 # Based on the default settings of modern detectors, we added warmup settings.
 param_scheduler = [

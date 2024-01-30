@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'CocoDataset'
-data_root = '/home/khc/trash/'
+data_root = '/mmdetection/data/trash/'
 
 
 # Example to use different file client
@@ -44,8 +44,8 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='train_100/annotations_train_100.json',
-        data_prefix=dict(img='train_100/images/'),
+        ann_file='train_1000/annotations_train_1000.json',
+        data_prefix=dict(img='train_1000/images/'),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
         backend_args=backend_args))
@@ -58,8 +58,8 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        ann_file='val_100/annotations_val_100.json',
-        data_prefix=dict(img='val_100/images/'),
+        ann_file='val_1000/annotations_val_1000.json',
+        data_prefix=dict(img='val_1000/images/'),
         test_mode=True,
         pipeline=test_pipeline,
         backend_args=backend_args))
@@ -67,7 +67,7 @@ test_dataloader = val_dataloader
 
 val_evaluator = dict(
     type='CocoMetric',
-    ann_file=data_root + 'val_100/annotations_val_100.json',
+    ann_file=data_root + 'val_1000/annotations_val_1000.json',
     metric='bbox',
     format_only=False,
     backend_args=backend_args)
