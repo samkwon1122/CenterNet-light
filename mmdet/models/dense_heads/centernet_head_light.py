@@ -19,7 +19,7 @@ from .base_dense_head import BaseDenseHead
 
 
 @MODELS.register_module()
-class CenterNetHead(BaseDenseHead):
+class CenterNetHeadLight(BaseDenseHead):
     """Objects as Points Head. CenterHead use center_point to indicate object's
     position. Paper link <https://arxiv.org/abs/1904.07850>
 
@@ -77,6 +77,10 @@ class CenterNetHead(BaseDenseHead):
         """Build head for each branch."""
         layer = nn.Sequential(
             nn.Conv2d(in_channels, feat_channels, kernel_size=3, padding=1),
+            
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1, groups=in_channels),
+            nn.Conv2d(in_channels, feat_channels, kernel_size=1)
+            
             nn.ReLU(inplace=True),
             nn.Conv2d(feat_channels, out_channels, kernel_size=1))
         return layer
@@ -159,9 +163,9 @@ class CenterNetHead(BaseDenseHead):
         """
         assert len(center_heatmap_preds) == len(wh_preds) == len(
             offset_preds) == 1
-        center_heatmap_pred = center_heatmap_preds[0]
-        wh_pred = wh_preds[0]
-        offset_pred = offset_preds[0]
+        center_heatmap_pred = center_heatmap_preds[-1]
+        wh_pred = wh_preds[-1]
+        offset_pred = offset_preds[-1]
 
         gt_bboxes = [
             gt_instances.bboxes for gt_instances in batch_gt_instances

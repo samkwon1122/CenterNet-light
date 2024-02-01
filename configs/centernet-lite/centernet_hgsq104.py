@@ -1,16 +1,12 @@
 _base_ = [
-    '../_base_/datasets/trash_detection.py',
+    '../_base_/datasets/voc0712.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py',
     './centernet_tta.py'
 ]
 
-metainfo = {
-    'classes': ('가구류', '고철류', '나무', '도기류', '비닐', '스티로폼', '유리병', '의류', '자전거', '전자제품', '종이류', '캔류', '페트병', '플라스틱류', '형광등'),
-    'palette': [(220, 20, 60), (119, 11, 32), (0, 0, 142), (0, 0, 230), (106, 0, 228), (0, 60, 100), (0, 80, 100), (0, 0, 70), (0, 0, 192), (250, 170, 30), (100, 170, 30), (220, 220, 0), (175, 116, 175), (250, 0, 30), (165, 42, 42)]
-}
-
-dataset_type = 'CocoDataset'
-data_root = '/mmdetection/data/trash/'
+dataset_type = 'VOCDataset'
+data_root = '/mmdetection/data/VOCdevkit/'
+backend_args = None
 
 # model settings
 model = dict(
@@ -21,16 +17,16 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         bgr_to_rgb=True),
     backbone=dict(
-        type='HourglassNet',
-        downsample_times=5,
-        num_stacks=1,
-        stage_channels=[256, 256, 384, 384, 384, 512],
-        stage_blocks=[2, 2, 2, 2, 2, 4],
+        type='HourglassSqNet',
+        downsample_times=4,
+        num_stacks=2,
+        stage_channels=[256, 256, 384, 384, 512],
+        stage_blocks=[2, 2, 2, 2, 4],
         norm_cfg=dict(type='BN', requires_grad=True)),
     neck=None,
     bbox_head=dict(
         type='CenterNetHead',
-        num_classes=15,
+        num_classes=20,
         in_channels=256,
         feat_channels=256,
         loss_center_heatmap=dict(type='GaussianFocalLoss', loss_weight=1.0),
@@ -88,23 +84,38 @@ test_pipeline = [
 # Use RepeatDataset to speed up training
 train_dataloader = dict(
     batch_size=16,
-    num_workers=0,
-    persistent_workers=False,
+    num_workers=4,
+    persistent_workers=Ture,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
-        _delete_=True,
         type='RepeatDataset',
         times=5,
         dataset=dict(
-            type=dataset_type,
-            data_root=data_root,
-            metainfo=metainfo,
-            ann_file='train_1000/annotations_train_1000.json',
-            data_prefix=dict(img='train_1000/images/'),
-            filter_cfg=dict(filter_empty_gt=True, min_size=32),
-            pipeline=train_pipeline,
-            backend_args={{_base_.backend_args}},
-        )))
+            type='ConcatDataset',
+            # VOCDataset will add different `dataset_type` in dataset.metainfo,
+            # which will get error if using ConcatDataset. Adding
+            # `ignore_keys` can avoid this error.
+            ignore_keys=['dataset_type'],
+            datasets=[
+                dict(
+                    type=dataset_type,
+                    data_root=data_root,
+                    ann_file='VOC2007/ImageSets/Main/trainval.txt',
+                    data_prefix=dict(sub_data_root='VOC2007/'),
+                    filter_cfg=dict(
+                        filter_empty_gt=True, min_size=32, bbox_min_size=32),
+                    pipeline=train_pipeline,
+                    backend_args=backend_args),
+                dict(
+                    type=dataset_type,
+                    data_root=data_root,
+                    ann_file='VOC2012/ImageSets/Main/trainval.txt',
+                    data_prefix=dict(sub_data_root='VOC2012/'),
+                    filter_cfg=dict(
+                        filter_empty_gt=True, min_size=32, bbox_min_size=32),
+                    pipeline=train_pipeline,
+                    backend_args=backend_args)
+            ])))
 
 val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
 test_dataloader = val_dataloader
@@ -113,9 +124,12 @@ test_dataloader = val_dataloader
 # Based on the default settings of modern detectors, the SGD effect is better
 # than the Adam in the source code, so we use SGD default settings and
 # if you use adam+lr5e-4, the map is 29.1.
-optim_wrapper = dict(clip_grad=dict(max_norm=35, norm_type=2))
+optim_wrapper = dict(
+    _delete_ = True,
+    type='OptimWrapper',
+    optimizer=dict(type='Adam', lr=1.25e-4, weight_decay=0.0001))
 
-max_epochs = 10
+max_epochs = 15
 # learning policy
 # Based on the default settings of modern detectors, we added warmup settings.
 param_scheduler = [

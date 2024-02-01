@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from mmcv.cnn import ConvModule
+from mmcv.cnn import build_conv_layer, build_norm_layer
 from mmengine.model import BaseModule
 
 from mmdet.registry import MODELS
@@ -12,8 +13,117 @@ from mmdet.utils import ConfigType, OptMultiConfig
 from ..layers import ResLayer
 from .resnet import BasicBlock
 
+class FireBlock(nn.Module):
+    def __init__(self, 
+                 inp_dim, 
+                 out_dim, 
+                 sr=2, 
+                 stride=1,
+                 downsample=None,
+                 conv_cfg=None,
+                 norm_cfg=dict(type='BN'),
+                 init_cfg=None):
+        super(FireBlock, self).__init__(init_cfg)
+        
+        self.conv1    = nn.Conv2d(inp_dim, out_dim // sr, kernel_size=1, stride=1, bias=False)
+        self.bn1      = nn.BatchNorm2d(out_dim // sr)
+        self.conv_1x1 = nn.Conv2d(out_dim // sr, out_dim // 2, kernel_size=1, stride=stride, bias=False)
+        self.conv_3x3 = nn.Conv2d(out_dim // sr, out_dim // 2, kernel_size=3, padding=1, 
+                                  stride=stride, groups=out_dim // sr, bias=False)
+        self.bn2      = nn.BatchNorm2d(out_dim)
+        self.skip     = (stride == 1 and inp_dim == out_dim)
+        self.relu     = nn.ReLU(inplace=True)
 
-class HourglassModule(BaseModule):
+    def forward(self, x):
+        conv1 = self.conv1(x)
+        bn1   = self.bn1(conv1)
+        conv2 = torch.cat((self.conv_1x1(bn1), self.conv_3x3(bn1)), 1)
+        bn2   = self.bn2(conv2)
+        if self.skip:
+            return self.relu(bn2 + x)
+        else:
+            return self.relu(bn2)
+        
+class FireLayer(Sequential):
+    """ResLayer to build ResNet style backbone.
+
+    Args:
+        block (nn.Module): block used to build ResLayer.
+        inplanes (int): inplanes of block.
+        planes (int): planes of block.
+        num_blocks (int): number of blocks.
+        stride (int): stride of the first block. Defaults to 1
+        avg_down (bool): Use AvgPool instead of stride conv when
+            downsampling in the bottleneck. Defaults to False
+        conv_cfg (dict): dictionary to construct and config conv layer.
+            Defaults to None
+        norm_cfg (dict): dictionary to construct and config norm layer.
+            Defaults to dict(type='BN')
+        downsample_first (bool): Downsample at the first block or last block.
+            False for Hourglass, True for ResNet. Defaults to True
+    """
+
+    def __init__(self,
+                 block: BaseModule,
+                 inplanes: int,
+                 planes: int,
+                 num_blocks: int,
+                 stride: int = 1,
+                 avg_down: bool = False,
+                 conv_cfg: OptConfigType = None,
+                 norm_cfg: ConfigType = dict(type='BN'),
+                 downsample_first: bool = True,
+                 **kwargs) -> None:
+        self.block = block
+
+        downsample = None
+        if stride != 1 or inplanes != planes:
+            downsample = []
+            conv_stride = stride
+            if avg_down:
+                conv_stride = 1
+                downsample.append(
+                    nn.AvgPool2d(
+                        kernel_size=stride,
+                        stride=stride,
+                        ceil_mode=True,
+                        count_include_pad=False))
+            downsample.extend([
+                build_conv_layer(
+                    conv_cfg,
+                    inplanes,
+                    planes,
+                    kernel_size=1,
+                    stride=conv_stride,
+                    bias=False),
+                build_norm_layer(norm_cfg, planes)[1]
+            ])
+            downsample = nn.Sequential(*downsample)
+
+        layers = []
+
+        # downsample_first=False is for HourglassModule
+        for _ in range(num_blocks - 1):
+            layers.append(
+                block(
+                    inplanes=inplanes,
+                    planes=inplanes,
+                    stride=1,
+                    conv_cfg=conv_cfg,
+                    norm_cfg=norm_cfg,
+                    **kwargs))
+        layers.append(
+            block(
+                inplanes=inplanes,
+                planes=planes,
+                stride=stride,
+                downsample=downsample,
+                conv_cfg=conv_cfg,
+                norm_cfg=norm_cfg,
+                **kwargs))
+        super().__init__(*layers)
+
+class HourglassSqModule(BaseModule):
     """Hourglass Module for HourglassNet backbone.
 
     Generate module recursively and use BasicBlock as the base unit.
@@ -49,37 +159,22 @@ class HourglassModule(BaseModule):
         cur_channel = stage_channels[0]
         next_channel = stage_channels[1]
 
-        self.up1 = ResLayer(
-            BasicBlock, cur_channel, cur_channel, cur_block, norm_cfg=norm_cfg)
+        self.up1 = FireLayer(
+            FireBlock, cur_channel, cur_channel, cur_block, norm_cfg=norm_cfg)
 
-        self.low1 = ResLayer(
-            BasicBlock,
-            cur_channel,
-            next_channel,
-            cur_block,
-            stride=2,
-            norm_cfg=norm_cfg)
+        self.low1 = FireLayer(
+            FireBlock, cur_channel, next_channel, cur_block, stride=2, norm_cfg=norm_cfg)
 
         if self.depth > 1:
-            self.low2 = HourglassModule(depth - 1, stage_channels[1:],
-                                        stage_blocks[1:])
+            self.low2 = HourglassSqModule(depth - 1, stage_channels[1:], stage_blocks[1:])
         else:
-            self.low2 = ResLayer(
-                BasicBlock,
-                next_channel,
-                next_channel,
-                next_block,
-                norm_cfg=norm_cfg)
+            self.low2 = FireLayer(
+                FireBlock, next_channel, next_channel, next_block, norm_cfg=norm_cfg)
 
-        self.low3 = ResLayer(
-            BasicBlock,
-            next_channel,
-            cur_channel,
-            cur_block,
-            norm_cfg=norm_cfg,
-            downsample_first=False)
+        self.low3 = FireLayer(
+            FireBlock, next_channel, cur_channel, cur_block, norm_cfg=norm_cfg, downsample_first=False)
 
-        self.up2 = F.interpolate
+        self.up2 = nn.ConvTranspose2d(cur_channel, cur_channel, 4, stride=2, padding=1)
         self.upsample_cfg = upsample_cfg
 
     def forward(self, x: torch.Tensor) -> nn.Module:
@@ -90,16 +185,13 @@ class HourglassModule(BaseModule):
         low3 = self.low3(low2)
         # Fixing `scale factor` (e.g. 2) is common for upsampling, but
         # in some cases the spatial size is mismatched and error will arise.
-        if 'scale_factor' in self.upsample_cfg:
-            up2 = self.up2(low3, **self.upsample_cfg)
-        else:
-            shape = up1.shape[2:]
-            up2 = self.up2(low3, size=shape, **self.upsample_cfg)
+        up2 = self.up2(low3)
+        
         return up1 + up2
 
 
 @MODELS.register_module()
-class HourglassNet(BaseModule):
+class HourglassSqNet(BaseModule):
     """HourglassNet backbone.
 
     Stacked Hourglass Networks for Human Pose Estimation.
@@ -153,7 +245,14 @@ class HourglassNet(BaseModule):
 
         self.stem = nn.Sequential(
             ConvModule(
-                3, cur_channel // 2, 7, padding=3, stride=2,
+                3, cur_channel // 4, 7, padding=3, stride=2,
+                norm_cfg=norm_cfg),
+            ResLayer(
+                BasicBlock,
+                cur_channel // 4,
+                cur_channel // 2,
+                1,
+                stride=2,
                 norm_cfg=norm_cfg),
             ResLayer(
                 BasicBlock,
@@ -164,7 +263,7 @@ class HourglassNet(BaseModule):
                 norm_cfg=norm_cfg))
 
         self.hourglass_modules = nn.ModuleList([
-            HourglassModule(downsample_times, stage_channels, stage_blocks)
+            HourglassSqModule(downsample_times, stage_channels, stage_blocks)
             for _ in range(num_stacks)
         ])
 
