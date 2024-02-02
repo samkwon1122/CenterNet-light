@@ -1,15 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
-from typing import List, Sequence
+from typing import List, Sequence, Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
 from mmcv.cnn import ConvModule
 from mmcv.cnn import build_conv_layer, build_norm_layer
-from mmengine.model import BaseModule
+from mmengine.model import BaseModule, Sequential
 
 from mmdet.registry import MODELS
-from mmdet.utils import ConfigType, OptMultiConfig
+from mmdet.utils import ConfigType, OptMultiConfig, OptConfigType
 from ..layers import ResLayer
 from .resnet import BasicBlock
 
@@ -44,7 +45,7 @@ class FireBlock(nn.Module):
         else:
             return self.relu(bn2)
         
-class FireLayer(Sequential):
+class FireLayer(nn.Sequential):
     """ResLayer to build ResNet style backbone.
 
     Args:

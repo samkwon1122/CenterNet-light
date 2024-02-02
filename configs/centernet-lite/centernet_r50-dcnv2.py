@@ -18,13 +18,13 @@ model = dict(
         bgr_to_rgb=True),
     backbone=dict(
         type='ResNet',
-        depth=18,
+        depth=50,
         norm_eval=False,
         norm_cfg=dict(type='BN'),
-        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet18')),
+        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
         type='CTResNetNeck',
-        in_channels=512,
+        in_channels=2048,
         num_deconv_filters=(256, 128, 64),
         num_deconv_kernels=(4, 4, 4),
         use_dcn=True),
