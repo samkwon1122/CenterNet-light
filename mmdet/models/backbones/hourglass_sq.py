@@ -14,25 +14,31 @@ from mmdet.utils import ConfigType, OptMultiConfig, OptConfigType
 from ..layers import ResLayer
 from .resnet import BasicBlock
 
-class FireBlock(nn.Module):
-    def __init__(self, 
-                 inp_dim, 
-                 out_dim, 
-                 sr=2, 
+class FireBlock(BaseModule):
+    sr = 2
+
+    def __init__(self,
+                 inplanes,
+                 planes,
                  stride=1,
+                 dilation=1,
                  downsample=None,
+                 style='pytorch',
+                 with_cp=False,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
+                 dcn=None,
+                 plugins=None,
                  init_cfg=None):
         super(FireBlock, self).__init__(init_cfg)
         
-        self.conv1    = nn.Conv2d(inp_dim, out_dim // sr, kernel_size=1, stride=1, bias=False)
-        self.bn1      = nn.BatchNorm2d(out_dim // sr)
-        self.conv_1x1 = nn.Conv2d(out_dim // sr, out_dim // 2, kernel_size=1, stride=stride, bias=False)
-        self.conv_3x3 = nn.Conv2d(out_dim // sr, out_dim // 2, kernel_size=3, padding=1, 
-                                  stride=stride, groups=out_dim // sr, bias=False)
-        self.bn2      = nn.BatchNorm2d(out_dim)
-        self.skip     = (stride == 1 and inp_dim == out_dim)
+        self.conv1    = nn.Conv2d(inplanes, planes // self.sr, kernel_size=1, stride=1, bias=False)
+        self.bn1      = nn.BatchNorm2d(planes // self.sr)
+        self.conv_1x1 = nn.Conv2d(planes // self.sr, planes // 2, kernel_size=1, stride=stride, bias=False)
+        self.conv_3x3 = nn.Conv2d(planes // self.sr, planes // 2, kernel_size=3, padding=1, 
+                                  stride=stride, groups=planes // self.sr, bias=False)
+        self.bn2      = nn.BatchNorm2d(planes)
+        self.skip     = (stride == 1 and inplanes == planes)
         self.relu     = nn.ReLU(inplace=True)
 
     def forward(self, x):

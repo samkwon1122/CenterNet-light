@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/datasets/voc0712.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py',
-    './centernet_tta.py'
+    '../centernet/centernet_tta.py'
 ]
 
 dataset_type = 'VOCDataset'
@@ -85,7 +85,7 @@ test_pipeline = [
 train_dataloader = dict(
     batch_size=16,
     num_workers=4,
-    persistent_workers=Ture,
+    persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
         type='RepeatDataset',
