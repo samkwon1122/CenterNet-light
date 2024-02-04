@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/datasets/voc0712.py',
     '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py',
-    './centernet_tta.py'
+    '../centernet/centernet_tta.py'
 ]
 
 dataset_type = 'VOCDataset'
@@ -83,9 +83,9 @@ test_pipeline = [
 
 # Use RepeatDataset to speed up training
 train_dataloader = dict(
-    batch_size=16,
-    num_workers=4,
-    persistent_workers=Ture,
+    batch_size=4,
+    num_workers=2,
+    persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
         type='RepeatDataset',
@@ -149,4 +149,4 @@ train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140
 # NOTE: `auto_scale_lr` is for automatically scaling LR,
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (16 samples per GPU)
-auto_scale_lr = dict(base_batch_size=16)
+auto_scale_lr = dict(base_batch_size=4)
