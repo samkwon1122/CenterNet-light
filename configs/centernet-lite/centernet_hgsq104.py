@@ -127,21 +127,18 @@ test_dataloader = val_dataloader
 optim_wrapper = dict(
     _delete_ = True,
     type='OptimWrapper',
-    optimizer=dict(type='Adam', lr=1.25e-4, weight_decay=0.0001))
+    optimizer=dict(type='Adam', lr=1.25e-4))
 
-max_epochs = 15
+max_epochs = 10
 # learning policy
 # Based on the default settings of modern detectors, we added warmup settings.
 param_scheduler = [
-    dict(
-        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0,
-        end=1000),
     dict(
         type='MultiStepLR',
         begin=0,
         end=max_epochs,
         by_epoch=True,
-        milestones=[18, 24],  # the real step is [18*5, 24*5]
+        milestones=[8],  # the real step is [18*5, 24*5]
         gamma=0.1)
 ]
 train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140

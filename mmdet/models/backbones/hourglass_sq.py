@@ -181,7 +181,7 @@ class HourglassSqModule(BaseModule):
         self.low3 = FireLayer(
             FireBlock, next_channel, cur_channel, cur_block, norm_cfg=norm_cfg, downsample_first=False)
 
-        self.up2 = nn.ConvTranspose2d(cur_channel, cur_channel, 4, stride=2, padding=1)
+        self.up2 = F.interpolate
         self.upsample_cfg = upsample_cfg
 
     def forward(self, x: torch.Tensor) -> nn.Module:
@@ -192,8 +192,12 @@ class HourglassSqModule(BaseModule):
         low3 = self.low3(low2)
         # Fixing `scale factor` (e.g. 2) is common for upsampling, but
         # in some cases the spatial size is mismatched and error will arise.
-        up2 = self.up2(low3)
-        
+        if 'scale_factor' in self.upsample_cfg:
+            up2 = self.up2(low3, **self.upsample_cfg)
+        else:
+            shape = up1.shape[2:]
+            up2 = self.up2(low3, size=shape, **self.upsample_cfg)
+
         return up1 + up2
 
 
