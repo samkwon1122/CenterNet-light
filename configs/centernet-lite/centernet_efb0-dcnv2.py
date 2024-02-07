@@ -17,14 +17,12 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         bgr_to_rgb=True),
     backbone=dict(
-        type='ResNet',
-        depth=18,
-        norm_eval=False,
-        norm_cfg=dict(type='BN')),
-        #init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet18')),
+        type='EfficientNet',
+        arch='b0'),
+        #init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://mmdet/mobilenet_v2')),
     neck=dict(
         type='CTResNetNeck',
-        in_channels=512,
+        in_channels=1280,
         num_deconv_filters=(256, 128, 64),
         num_deconv_kernels=(4, 4, 4),
         use_dcn=True),
@@ -92,7 +90,6 @@ train_dataloader = dict(
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
     dataset=dict(
-        _delete_=True,
         type='RepeatDataset',
         times=5,
         dataset=dict(
@@ -121,7 +118,6 @@ train_dataloader = dict(
                     pipeline=train_pipeline,
                     backend_args=backend_args)
             ])))
-
 
 val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
 test_dataloader = val_dataloader
@@ -153,5 +149,3 @@ train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140
 # USER SHOULD NOT CHANGE ITS VALUES.
 # base_batch_size = (8 GPUs) x (16 samples per GPU)
 auto_scale_lr = dict(base_batch_size=16)
-
-#load_from = 'checkpoints/centernet_resnet18_dcnv2_140e_coco_20210702_155131-c8cd631f.pth'

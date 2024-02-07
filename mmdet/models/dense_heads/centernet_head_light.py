@@ -76,8 +76,6 @@ class CenterNetHeadLight(BaseDenseHead):
                     out_channels: int) -> nn.Sequential:
         """Build head for each branch."""
         layer = nn.Sequential(
-            nn.Conv2d(in_channels, feat_channels, kernel_size=3, padding=1),
-            
             nn.Conv2d(in_channels, in_channels, kernel_size=3, padding=1, groups=in_channels),
             nn.Conv2d(in_channels, feat_channels, kernel_size=1),
             

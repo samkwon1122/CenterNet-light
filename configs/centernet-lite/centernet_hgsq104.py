@@ -127,7 +127,7 @@ test_dataloader = val_dataloader
 optim_wrapper = dict(
     _delete_ = True,
     type='OptimWrapper',
-    optimizer=dict(type='Adam', lr=1.25e-4))
+    optimizer=dict(type='Adam', lr=0.00025))
 
 max_epochs = 10
 # learning policy
