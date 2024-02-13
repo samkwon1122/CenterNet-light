@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument(
         '--task',
         choices=['inference', 'dataloader', 'dataset'],
-        default='dataloader',
+        default='inference',
         help='Which task do you want to go to benchmark')
     parser.add_argument(
         '--repeat-num',

@@ -219,7 +219,7 @@ class InferenceBenchmark(BaseBenchmark):
             start_time = time.perf_counter()
 
             with torch.no_grad():
-                self.model.test_step(data)
+                self.model.module.test_step(data)
 
             torch.cuda.synchronize()
             elapsed = time.perf_counter() - start_time
