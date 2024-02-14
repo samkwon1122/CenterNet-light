@@ -1,5 +1,7 @@
 # CenterNet-lite
 
+![demo image](./resources/demo.png)
+
 ## Introduction
 
 이 프로젝트는 CenterNet를 경량화 하기 위해 만들어졌습니다.
@@ -17,7 +19,7 @@
 모델 별 [config 파일](./configs/centernet-lite/)을 만들고 [model settings 부분](./configs/centernet-lite/centernet_hgsq104_light.py?plain=1#L12)을 변경하였습니다.
 
 2. fire module 구현  
-residual block을 fire module로 구현한 새로운 [hourglass network 파일](./mmdet/models/backbones/hourglass_sq.py)을 만들었습니다.
+residual block을 fire module로 교체한 새로운 [hourglass network 파일](./mmdet/models/backbones/hourglass_sq.py)을 만들었습니다.
 
 3. light head 구현  
 depth-wise separable conv를 사용하는 새로운 [light head 파일](./mmdet/models/dense_heads/centernet_head_light.py)을 만들었습니다.
@@ -78,7 +80,7 @@ Step 2.
     python tools/analysis_tools/get_flops.py ${CONFIG_FILE}
 
 예시
-```Python
+```bash
 #mAP
 python tools/test.py configs/centernet-lite/centernet_hgsq104_light.py work_dirs/centernet_hgsq104_light/epoch_10.pth
 
