@@ -4,7 +4,7 @@ _base_ = [
     '../centernet/centernet_tta.py'
 ]
 
-dataset_type = 'VOCDataset'
+dataset_type = 'VOCDataset'         # dataset 타입과 경로 지정
 data_root = '/mmdetection/data/VOCdevkit/'
 backend_args = None
 
@@ -17,17 +17,17 @@ model = dict(
         std=[58.395, 57.12, 57.375],
         bgr_to_rgb=True),
     backbone=dict(
-        type='HourglassNet',
-        downsample_times=5,
+        type='HourglassNet',        # HourglassNet 사용
+        downsample_times=5,         # 다운샘플링 5번
         num_stacks=2,
         stage_channels=[256, 256, 384, 384, 384, 512],
         stage_blocks=[2, 2, 2, 2, 2, 4],
         norm_cfg=dict(type='BN', requires_grad=True)),
-    neck=None,
+    neck=None,                      # Hourglass는 neck 사용 안 함
     bbox_head=dict(
         type='CenterNetHead',
-        num_classes=20,
-        in_channels=256,
+        num_classes=20,             # VOC dataset 이므로 클래스 20개
+        in_channels=256,            # head에 들어가는 채널 수 명시
         feat_channels=256,
         loss_center_heatmap=dict(type='GaussianFocalLoss', loss_weight=1.0),
         loss_wh=dict(type='L1Loss', loss_weight=0.1),
@@ -83,7 +83,7 @@ test_pipeline = [
 
 # Use RepeatDataset to speed up training
 train_dataloader = dict(
-    batch_size=6,
+    batch_size=6,           # 메모리 부족으로 batch size = 6
     num_workers=2,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
@@ -120,28 +120,23 @@ train_dataloader = dict(
 val_dataloader = dict(dataset=dict(pipeline=test_pipeline))
 test_dataloader = val_dataloader
 
-# optimizer
-# Based on the default settings of modern detectors, the SGD effect is better
-# than the Adam in the source code, so we use SGD default settings and
-# if you use adam+lr5e-4, the map is 29.1.
 optim_wrapper = dict(
     _delete_ = True,
     type='OptimWrapper',
-    optimizer=dict(type='Adam', lr=1.25e-4))
+    optimizer=dict(type='Adam', lr=1.25e-4))    # optimizer와 learning rate 지정
 
-max_epochs = 10
+max_epochs = 10     # epoch 수 지정 (repeat 5번 이므로 10 epochs이면 실질적으로 50 epochs)
 # learning policy
-# Based on the default settings of modern detectors, we added warmup settings.
 param_scheduler = [
     dict(
         type='MultiStepLR',
         begin=0,
         end=max_epochs,
         by_epoch=True,
-        milestones=[8],  # the real step is [18*5, 24*5]
+        milestones=[8],  # 8*5=40 epoch에서 learning rate 감소
         gamma=0.1)
 ]
-train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 28*5=140
+train_cfg = dict(max_epochs=max_epochs)  # the real epoch is 10*5=50
 
 # NOTE: `auto_scale_lr` is for automatically scaling LR,
 # USER SHOULD NOT CHANGE ITS VALUES.

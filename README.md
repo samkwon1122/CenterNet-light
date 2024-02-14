@@ -9,6 +9,19 @@
 
 위 세 가지 방법을 시도하였습니다.
 
+모든 작업은 MMDetection framework를 이용하여 진행되었습니다. 자세한 정보는 [공식 문서](https://mmdetection.readthedocs.io/en/latest/)를 참고해주세요.
+
+## 방법
+
+1. backbone 교체  
+모델 별 [config 파일](./configs/centernet-lite/)을 만들고 [model settings 부분](./configs/centernet-lite/centernet_hgsq104_light.py?plain=1#L12)을 변경하였습니다.
+
+2. fire module 구현  
+residual block을 fire module로 구현한 새로운 [hourglass network 파일](./mmdet/models/backbones/hourglass_sq.py)을 만들었습니다.
+
+3. light head 구현  
+depth-wise separable conv를 사용하는 새로운 [light head 파일](./mmdet/models/dense_heads/centernet_head_light.py)을 만들었습니다.
+
 ## Installation
 
 Docker를 이용하여 환경을 설정합니다.
@@ -61,18 +74,20 @@ Step 2.
     python -m torch.distributed.launch --nproc_per_node=1 --master_port=${PORT} tools/analysis_tools/benchmark.py ${CONFIG} --checkpoint ${CHECKPOINT} --launcher pytorch
 
 모델의 복잡도를 측정합니다.
+
     python tools/analysis_tools/get_flops.py ${CONFIG_FILE}
 
 예시
+```Python
+#mAP
+python tools/test.py configs/centernet-lite/centernet_hgsq104_light.py work_dirs/centernet_hgsq104_light/epoch_10.pth
 
-    #mAP
-    python tools/test.py configs/centernet-lite/centernet_hgsq104_light.py work_dirs/centernet_hgsq104_light/epoch_10.pth
+#FPS
+python -m torch.distributed.launch --nproc_per_node=1 --master_port=29500 tools/analysis_tools/benchmark.py configs/centernet-lite/centernet_hgsq104_light.py --checkpoint work_dirs/centernet_hgsq104_light/epoch_10.pth --launcher pytorch
 
-    #FPS
-    python -m torch.distributed.launch --nproc_per_node=1 --master_port=29500 tools/analysis_tools/benchmark.py configs/centernet-lite/centernet_hgsq104_light.py --checkpoint work_dirs/centernet_hgsq104_light/epoch_10.pth --launcher pytorch
-
-    #Complexity
-    python tools/analysis_tools/get_flops.py configs/centernet-lite/centernet_hgsq104_light.py 
+#Complexity
+python tools/analysis_tools/get_flops.py configs/centernet-lite/centernet_hgsq104_light.py 
+```
 
 ## Demo
 
